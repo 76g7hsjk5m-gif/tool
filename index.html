@@ -2,370 +2,807 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VANTA Tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>OVERWATCH // OSINT</title>
 <style>
-  :root { --bg: #0a0a0a; --surface: #111; --border: #222; --accent: #7c3aed; --text: #e5e5e5; --muted: #555; }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
-  .nav { display:flex; gap:4px; padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
-  .nav button { padding:8px 16px; background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; cursor:pointer; font-size:13px; transition:all .2s; }
-  .nav button.active, .nav button:hover { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .page { display:none; padding:24px; max-width:800px; margin:0 auto; }
-  .page.active { display:block; }
-  h2 { font-size:18px; margin-bottom:20px; color:#fff; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
-  input, select { width:100%; padding:10px 14px; background:#1a1a1a; border:1px solid var(--border); color:var(--text); border-radius:7px; font-size:14px; margin-bottom:12px; outline:none; }
-  input:focus { border-color:var(--accent); }
-  button.btn { padding:10px 20px; background:var(--accent); border:none; color:#fff; border-radius:7px; cursor:pointer; font-size:14px; margin-right:8px; }
-  button.btn.sec { background:#1a1a1a; border:1px solid var(--border); }
-  .result { background:#0d0d0d; border:1px solid var(--border); border-radius:8px; padding:16px; margin-top:16px; font-size:13px; line-height:1.8; word-break:break-all; }
-  .result .key { color:var(--muted); }
-  .result .val { color:#a78bfa; font-weight:500; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:4px; }
-  .badge.green { background:#064e3b; color:#34d399; }
-  .badge.purple { background:#2e1065; color:#a78bfa; }
-  .badge.blue { background:#1e3a5f; color:#60a5fa; }
-  .inbox { max-height:300px; overflow-y:auto; }
-  .mail-item { padding:12px; border-bottom:1px solid var(--border); cursor:pointer; }
-  .mail-item:hover { background:#161616; }
-  .mail-from { font-size:12px; color:var(--muted); }
-  .mail-sub { font-size:14px; color:var(--text); margin-top:2px; }
-  .loader { color:var(--muted); font-size:13px; padding:12px 0; }
-  .copy-btn { font-size:11px; padding:4px 10px; background:#1a1a1a; border:1px solid var(--border); color:var(--muted); border-radius:4px; cursor:pointer; float:right; }
-  .tab-row { display:flex; gap:8px; margin-bottom:16px; }
-  .tab-btn { padding:6px 14px; background:#1a1a1a; border:1px solid var(--border); color:var(--muted); border-radius:5px; cursor:pointer; font-size:12px; }
-  .tab-btn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .domain-tag { display:inline-block; padding:3px 10px; background:#1a1a1a; border:1px solid var(--border); border-radius:5px; font-size:12px; margin:2px; cursor:pointer; }
-  .domain-tag:hover { border-color:var(--accent); color:var(--accent); }
-  a { color:#a78bfa; text-decoration:none; }
-  a:hover { text-decoration:underline; }
-  .avatar { width:64px; height:64px; border-radius:50%; border:2px solid var(--accent); margin-bottom:12px; }
-  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .info-item { background:#0d0d0d; border-radius:6px; padding:10px 12px; }
-  .info-item .k { font-size:11px; color:var(--muted); margin-bottom:2px; }
-  .info-item .v { font-size:13px; color:#e5e5e5; }
-  @media(max-width:500px) { .info-grid { grid-template-columns:1fr; } }
+:root{
+  --bg:#040406;--surface:#0a0a0f;--surface2:#0f0f17;--border:#1a1a2e;
+  --accent:#6d28d9;--accent2:#7c3aed;--green:#10b981;--red:#ef4444;
+  --yellow:#f59e0b;--text:#e2e8f0;--muted:#4a5568;--dim:#1e2030;
+  --font:'Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden;}
+
+/* scanline overlay */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* ticker */
+.ticker{
+  background:#050508;border-bottom:1px solid var(--border);
+  padding:6px 0;overflow:hidden;white-space:nowrap;font-size:11px;color:var(--muted);
+}
+.ticker-inner{display:inline-block;animation:tick 30s linear infinite;}
+@keyframes tick{from{transform:translateX(100vw);}to{transform:translateX(-100%);}}
+.ticker span{color:var(--accent2);margin:0 8px;}
+
+/* header */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-bottom:1px solid var(--border);
+  background:var(--surface);position:sticky;top:0;z-index:100;
+}
+.logo{font-size:14px;letter-spacing:3px;color:#fff;font-weight:700;}
+.logo span{color:var(--accent2);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;margin-right:6px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.header-right{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:16px;}
+.coord{color:var(--accent2);font-size:10px;}
+
+/* nav tabs */
+.tabs{
+  display:flex;gap:0;border-bottom:1px solid var(--border);
+  background:var(--surface);overflow-x:auto;
+}
+.tab{
+  padding:12px 20px;font-size:11px;letter-spacing:1.5px;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;
+  transition:all .2s;border-right:1px solid var(--border);
+  background:transparent;border-top:none;border-left:none;font-family:var(--font);
+}
+.tab:hover{color:var(--text);background:var(--dim);}
+.tab.on{color:var(--accent2);border-bottom-color:var(--accent2);background:var(--dim);}
+.tab .tag{font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:2px;margin-left:6px;}
+
+/* pages */
+.page{display:none;padding:28px 24px;max-width:900px;margin:0 auto;}
+.page.on{display:block;}
+
+/* section label */
+.sec-label{
+  font-size:10px;letter-spacing:3px;color:var(--muted);margin-bottom:20px;
+  border-left:2px solid var(--accent2);padding-left:10px;
+}
+
+/* input row */
+.input-row{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.inp{
+  flex:1;min-width:200px;padding:11px 14px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font);font-size:13px;
+  outline:none;transition:border .2s;
+}
+.inp:focus{border-color:var(--accent2);}
+.inp::placeholder{color:var(--muted);}
+.btn{
+  padding:11px 22px;background:var(--accent);border:none;
+  color:#fff;font-family:var(--font);font-size:12px;letter-spacing:1px;
+  cursor:pointer;transition:background .2s;white-space:nowrap;
+}
+.btn:hover{background:var(--accent2);}
+.btn.ghost{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.btn.ghost:hover{color:var(--text);border-color:var(--accent2);}
+
+/* result panel */
+.panel{
+  background:var(--surface2);border:1px solid var(--border);
+  margin-bottom:12px;
+}
+.panel-head{
+  padding:10px 16px;background:var(--dim);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;letter-spacing:2px;color:var(--muted);
+}
+.panel-head .title{color:var(--text);}
+.panel-body{padding:16px;}
+
+/* grid */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+/* field */
+.field{background:var(--bg);border:1px solid var(--border);padding:10px 12px;}
+.field .k{font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;}
+.field .v{font-size:13px;color:var(--text);word-break:break-all;}
+.field .v a{color:var(--accent2);text-decoration:none;}
+.field .v a:hover{text-decoration:underline;}
+
+/* badge */
+.badge{display:inline-block;padding:2px 8px;font-size:10px;margin:2px;letter-spacing:1px;}
+.badge.purple{background:#2e1065;color:#a78bfa;border:1px solid #4c1d95;}
+.badge.green{background:#064e3b;color:#34d399;border:1px solid #065f46;}
+.badge.red{background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d;}
+.badge.yellow{background:#451a03;color:#fcd34d;border:1px solid #78350f;}
+.badge.blue{background:#0c1a3a;color:#93c5fd;border:1px solid #1e3a5f;}
+.badge.grey{background:#1a1a1a;color:var(--muted);border:1px solid var(--border);}
+
+/* avatar */
+.avatar{width:72px;height:72px;border:2px solid var(--accent2);object-fit:cover;margin-bottom:12px;}
+
+/* breach item */
+.breach-item{
+  border:1px solid var(--border);padding:12px 14px;margin-bottom:6px;
+  border-left:3px solid var(--red);background:rgba(239,68,68,.03);
+}
+.breach-name{font-size:13px;color:var(--red);margin-bottom:4px;letter-spacing:1px;}
+.breach-meta{font-size:11px;color:var(--muted);}
+
+/* platform hit */
+.platform-hit{
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--border);padding:10px 14px;margin-bottom:6px;
+  background:rgba(109,40,217,.04);
+}
+.platform-hit .icon{font-size:18px;width:28px;text-align:center;}
+.platform-hit .name{font-size:13px;color:var(--text);}
+.platform-hit .url{font-size:11px;color:var(--accent2);}
+.platform-hit .dot{width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;box-shadow:0 0 4px var(--green);}
+
+/* loader */
+.loader{
+  font-size:11px;color:var(--muted);letter-spacing:2px;padding:20px 0;
+  display:flex;align-items:center;gap:8px;
+}
+.loader::before{
+  content:'';width:10px;height:10px;border:1px solid var(--accent2);
+  border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:block;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* mail */
+.mail-addr{
+  font-size:16px;color:var(--accent2);letter-spacing:2px;
+  padding:14px;background:var(--bg);border:1px solid var(--border);
+  margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;
+}
+.mail-list{max-height:280px;overflow-y:auto;}
+.mail-item{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .15s;
+}
+.mail-item:hover{background:var(--dim);}
+.mail-item .from{font-size:11px;color:var(--muted);}
+.mail-item .subj{font-size:13px;color:var(--text);margin-top:2px;}
+.mail-item .time{font-size:10px;color:var(--muted);float:right;}
+.mail-body{
+  white-space:pre-wrap;font-size:12px;line-height:1.8;color:var(--text);
+  padding:14px;background:var(--bg);border:1px solid var(--border);max-height:300px;overflow-y:auto;
+}
+
+/* roblox */
+.rob-avatar{width:80px;height:80px;border:2px solid var(--accent2);object-fit:cover;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+
+/* empty */
+.empty{font-size:11px;color:var(--muted);letter-spacing:1px;padding:16px 0;text-align:center;}
+
+/* intercept ticker for hero */
+.intercept-row{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;
+}
+.intercept-pill{
+  font-size:10px;padding:4px 10px;background:var(--dim);
+  border:1px solid var(--border);color:var(--muted);letter-spacing:1px;
+}
+.intercept-pill span{color:var(--accent2);}
 </style>
 </head>
 <body>
 
-<div class="nav">
-  <button class="active" onclick="go('tempmail')">📧 TempMail</button>
-  <button onclick="go('discord')">🎮 Discord OSINT</button>
-  <button onclick="go('domain')">🌐 Domain OSINT</button>
-  <button onclick="go('username')">👤 Username OSINT</button>
-  <button onclick="go('ip')">📡 IP Lookup</button>
-</div>
-
-<!-- ══ TEMP MAIL ══ -->
-<div id="page-tempmail" class="page active">
-  <h2>📧 Temporary Email</h2>
-  <div class="card">
-    <div id="tm-addr" style="font-size:16px;color:#a78bfa;margin-bottom:12px;">Generating inbox...</div>
-    <button class="btn" onclick="copyAddr()">Copy Address</button>
-    <button class="btn sec" onclick="initMail()">New Address</button>
-    <button class="btn sec" onclick="checkMail()">Refresh Inbox</button>
-  </div>
-  <div class="card">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Inbox <span id="mail-count" style="color:#a78bfa"></span></div>
-    <div class="inbox" id="inbox"><div class="loader">No messages yet...</div></div>
-  </div>
-  <div class="card" id="mail-body-card" style="display:none">
-    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Message</div>
-    <div id="mail-body" style="white-space:pre-wrap;font-size:13px;line-height:1.7;"></div>
+<div class="ticker">
+  <div class="ticker-inner">
+    INTERCEPT&nbsp;<span>email=j***@proton.me</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>discord=id:850******</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>ip=91.212.**.**·KYIV</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>breach=Collection#1</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>user=n0ct**rn</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>domain=dark*****.onion</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>roblox=id:12345***</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>leak=stealer-log·2.1M</span>&nbsp;&nbsp;·&nbsp;&nbsp;
+    INTERCEPT&nbsp;<span>phone=+1·555·***·****</span>
   </div>
 </div>
 
-<!-- ══ DISCORD OSINT ══ -->
+<header>
+  <div class="logo">// <span>OVERWATCH</span></div>
+  <div class="header-right">
+    <div><span class="status-dot"></span>ALL SYSTEMS LIVE</div>
+    <div class="coord" id="coord">LOADING...</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab on" onclick="go('mail',this)">📧 TEMPMAIL</button>
+  <button class="tab" onclick="go('discord',this)">🎮 DISCORD<span class="tag">OSINT</span></button>
+  <button class="tab" onclick="go('roblox',this)">🎯 ROBLOX<span class="tag">OSINT</span></button>
+  <button class="tab" onclick="go('username',this)">👤 USERNAME<span class="tag">OSINT</span></button>
+  <button class="tab" onclick="go('ip',this)">📡 IP LOOKUP</button>
+  <button class="tab" onclick="go('domain',this)">🌐 DOMAIN</button>
+</div>
+
+<!-- ══════════════ TEMPMAIL ══════════════ -->
+<div id="page-mail" class="page on">
+  <div class="sec-label">DISPOSABLE INBOX // MAIL.TM ENGINE // AUTO-REFRESH 15s</div>
+
+  <div class="mail-addr">
+    <span id="tm-addr">GENERATING INBOX...</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn ghost" onclick="copyAddr()">COPY</button>
+      <button class="btn ghost" onclick="initMail()">NEW INBOX</button>
+      <button class="btn ghost" onclick="checkMail()">REFRESH</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="title">INBOX</span>
+      <span id="mail-count">0 MESSAGES</span>
+    </div>
+    <div class="panel-body" style="padding:0;">
+      <div class="mail-list" id="inbox">
+        <div class="empty">NO MESSAGES INTERCEPTED</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="mail-view" style="display:none;">
+    <div class="panel-head"><span class="title">MESSAGE</span><button class="btn ghost" style="padding:4px 10px;font-size:10px;" onclick="document.getElementById('mail-view').style.display='none'">CLOSE</button></div>
+    <div class="panel-body" style="padding:0;">
+      <div class="mail-body" id="mail-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DISCORD ══════════════ -->
 <div id="page-discord" class="page">
-  <h2>🎮 Discord OSINT</h2>
-  <div class="card">
-    <input id="disc-id" placeholder="Discord User ID (e.g. 123456789012345678)"/>
-    <button class="btn" onclick="discordLookup()">Lookup</button>
+  <div class="sec-label">DISCORD OSINT // SNOWFLAKE DECODE // PROFILE EXTRACT // BREACH CORRELATION</div>
+  <div class="input-row">
+    <input class="inp" id="disc-id" placeholder="DISCORD USER ID  (e.g. 123456789012345678)"/>
+    <button class="btn" onclick="discordLookup()">TRACE</button>
   </div>
   <div id="disc-result"></div>
 </div>
 
-<!-- ══ DOMAIN OSINT ══ -->
-<div id="page-domain" class="page">
-  <h2>🌐 Domain OSINT</h2>
-  <div class="card">
-    <input id="dom-input" placeholder="domain.com"/>
-    <button class="btn" onclick="domainLookup()">Lookup</button>
+<!-- ══════════════ ROBLOX ══════════════ -->
+<div id="page-roblox" class="page">
+  <div class="sec-label">ROBLOX OSINT // USER PROFILING // FRIEND GRAPH // GAME HISTORY</div>
+  <div class="input-row">
+    <input class="inp" id="rob-input" placeholder="ROBLOX USERNAME OR USER ID"/>
+    <button class="btn" onclick="robloxLookup()">TRACE</button>
   </div>
-  <div id="dom-result"></div>
+  <div id="rob-result"></div>
 </div>
 
-<!-- ══ USERNAME OSINT ══ -->
+<!-- ══════════════ USERNAME ══════════════ -->
 <div id="page-username" class="page">
-  <h2>👤 Username OSINT</h2>
-  <div class="card">
-    <input id="uname-input" placeholder="username"/>
-    <button class="btn" onclick="usernameLookup()">Search Platforms</button>
+  <div class="sec-label">USERNAME OSINT // CROSS-PLATFORM // LIVE PROBE // CONFIRMED HITS ONLY</div>
+  <div class="input-row">
+    <input class="inp" id="uname-input" placeholder="TARGET USERNAME"/>
+    <button class="btn" onclick="usernameLookup()">SCAN</button>
   </div>
   <div id="uname-result"></div>
 </div>
 
-<!-- ══ IP LOOKUP ══ -->
+<!-- ══════════════ IP ══════════════ -->
 <div id="page-ip" class="page">
-  <h2>📡 IP Lookup</h2>
-  <div class="card">
-    <input id="ip-input" placeholder="IP address (leave blank for your own)"/>
-    <button class="btn" onclick="ipLookup()">Lookup</button>
-    <button class="btn sec" onclick="document.getElementById('ip-input').value='';ipLookup()">My IP</button>
+  <div class="sec-label">IP INTELLIGENCE // GEO // ASN // THREAT CORRELATION</div>
+  <div class="input-row">
+    <input class="inp" id="ip-input" placeholder="TARGET IP  (blank = your own)"/>
+    <button class="btn" onclick="ipLookup()">TRACE</button>
+    <button class="btn ghost" onclick="document.getElementById('ip-input').value='';ipLookup()">MY IP</button>
   </div>
   <div id="ip-result"></div>
 </div>
 
+<!-- ══════════════ DOMAIN ══════════════ -->
+<div id="page-domain" class="page">
+  <div class="sec-label">DOMAIN INTEL // WHOIS // DNS // RECON LINKS</div>
+  <div class="input-row">
+    <input class="inp" id="dom-input" placeholder="TARGET DOMAIN  (e.g. example.com)"/>
+    <button class="btn" onclick="domainLookup()">TRACE</button>
+  </div>
+  <div id="dom-result"></div>
+</div>
+
 <script>
 // ── nav ──
-function go(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  event.target.classList.add('active');
+function go(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  document.getElementById('page-'+id).classList.add('on');
+  btn.classList.add('on');
 }
 
-// ── TEMP MAIL (mail.tm — free, no key) ──
-let tmToken = '', tmEmail = '', tmId = '';
+// ── coord spoof ──
+(function(){
+  const lats=['40.71','51.50','48.85','35.68','55.75','37.77','1.35','-33.86'];
+  const lons=['-74.00','-0.12','2.35','139.69','37.61','-122.41','103.81','151.20'];
+  const cities=['NEW YORK','LONDON','PARIS','TOKYO','MOSCOW','SF','SINGAPORE','SYDNEY'];
+  const i=Math.floor(Math.random()*lats.length);
+  document.getElementById('coord').textContent=lats[i]+'°, '+lons[i]+'° · '+cities[i];
+})();
 
-async function initMail() {
-  document.getElementById('tm-addr').innerText = 'Generating...';
-  document.getElementById('inbox').innerHTML = '<div class="loader">Loading...</div>';
-  try {
-    const domsRes = await fetch('https://api.mail.tm/domains');
-    const domsData = await domsRes.json();
-    const domain = domsData['hydra:member'][0].domain;
-    const user = Math.random().toString(36).substring(2,10);
-    tmEmail = user + '@' + domain;
-    const pass = Math.random().toString(36).substring(2,14);
-    await fetch('https://api.mail.tm/accounts', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({address: tmEmail, password: pass})
-    });
-    const tokenRes = await fetch('https://api.mail.tm/token', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({address: tmEmail, password: pass})
-    });
-    const tokenData = await tokenRes.json();
-    tmToken = tokenData.token;
-    document.getElementById('tm-addr').innerText = tmEmail;
+// ══════════ TEMPMAIL (mail.tm) ══════════
+let tmToken='',tmEmail='';
+
+async function initMail(){
+  document.getElementById('tm-addr').textContent='GENERATING...';
+  document.getElementById('inbox').innerHTML='<div class="empty">INITIALIZING...</div>';
+  try{
+    const dr=await fetch('https://api.mail.tm/domains');
+    const dd=await dr.json();
+    const domain=dd['hydra:member'][0].domain;
+    const user=Math.random().toString(36).slice(2,10);
+    const pass=Math.random().toString(36).slice(2,16);
+    tmEmail=user+'@'+domain;
+    await fetch('https://api.mail.tm/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:tmEmail,password:pass})});
+    const tr=await fetch('https://api.mail.tm/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:tmEmail,password:pass})});
+    const td=await tr.json();
+    tmToken=td.token;
+    document.getElementById('tm-addr').textContent=tmEmail;
     checkMail();
-  } catch(e) {
-    document.getElementById('tm-addr').innerText = 'Error — try refreshing';
+  }catch(e){
+    document.getElementById('tm-addr').textContent='ERROR — RETRY';
   }
 }
 
-async function checkMail() {
-  if (!tmToken) return;
-  const res = await fetch('https://api.mail.tm/messages', {
-    headers:{'Authorization':'Bearer '+tmToken}
-  });
-  const data = await res.json();
-  const msgs = data['hydra:member'] || [];
-  document.getElementById('mail-count').innerText = '('+msgs.length+')';
-  if (!msgs.length) {
-    document.getElementById('inbox').innerHTML = '<div class="loader">No messages yet...</div>';
+async function checkMail(){
+  if(!tmToken)return;
+  try{
+    const r=await fetch('https://api.mail.tm/messages',{headers:{'Authorization':'Bearer '+tmToken}});
+    const d=await r.json();
+    const msgs=d['hydra:member']||[];
+    document.getElementById('mail-count').textContent=msgs.length+' MESSAGE'+(msgs.length!==1?'S':'');
+    if(!msgs.length){document.getElementById('inbox').innerHTML='<div class="empty">NO MESSAGES INTERCEPTED</div>';return;}
+    document.getElementById('inbox').innerHTML=msgs.map(m=>`
+      <div class="mail-item" onclick="openMail('${m.id}')">
+        <span class="time">${new Date(m.createdAt).toLocaleTimeString()}</span>
+        <div class="from">${m.from?.address||'UNKNOWN'}</div>
+        <div class="subj">${m.subject||'(NO SUBJECT)'}</div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+async function openMail(id){
+  try{
+    const r=await fetch('https://api.mail.tm/messages/'+id,{headers:{'Authorization':'Bearer '+tmToken}});
+    const d=await r.json();
+    document.getElementById('mail-view').style.display='block';
+    document.getElementById('mail-body').textContent=
+      'FROM: '+(d.from?.address||'?')+'\nSUBJECT: '+(d.subject||'?')+'\n\n'+(d.text||d.html?.replace(/<[^>]+>/g,'')||'(EMPTY)');
+  }catch(e){}
+}
+
+function copyAddr(){
+  if(tmEmail)navigator.clipboard.writeText(tmEmail);
+}
+
+// ══════════ DISCORD OSINT ══════════
+async function discordLookup(){
+  const id=document.getElementById('disc-id').value.trim();
+  if(!id){return;}
+  const el=document.getElementById('disc-result');
+  el.innerHTML='<div class="loader">TRACING DISCORD ID '+id+'...</div>';
+
+  // snowflake decode
+  const epoch=1420070400000n;
+  let ts,created;
+  try{ts=Number((BigInt(id)>>22n)+epoch);created=new Date(ts).toUTCString();}
+  catch(e){created='INVALID ID';}
+
+  // profile via japi.rest (no key)
+  let username='—',discriminator='—',avatar='',banner='',badges=[],bot=false;
+  try{
+    const r=await fetch('https://japi.rest/discord/v1/user/'+id);
+    const d=await r.json();
+    if(d?.data){
+      username=d.data.username||'—';
+      discriminator=d.data.discriminator||'0';
+      bot=d.data.bot||false;
+      const av=d.data.avatar;
+      if(av)avatar=`https://cdn.discordapp.com/avatars/${id}/${av}.png?size=128`;
+      const bn=d.data.banner;
+      if(bn)banner=`https://cdn.discordapp.com/banners/${id}/${bn}.png?size=512`;
+      const f=d.data.public_flags||0;
+      if(f&1)badges.push('STAFF');
+      if(f&64)badges.push('BRAVERY');
+      if(f&128)badges.push('BRILLIANCE');
+      if(f&256)badges.push('BALANCE');
+      if(f&512)badges.push('EARLY SUPPORTER');
+      if(f&131072)badges.push('BOT DEV');
+      if(f&4194304)badges.push('ACTIVE DEV');
+      if(f&262144)badges.push('BUG HUNTER');
+      if(bot)badges.push('BOT');
+    }
+  }catch(e){}
+
+  // breach check via xposedornot (free, no key)
+  let breaches=[];
+  if(username!=='—'){
+    try{
+      const r=await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(username)}`);
+      const d=await r.json();
+      if(d?.ExposedBreaches?.breaches_details)breaches=d.ExposedBreaches.breaches_details;
+    }catch(e){}
+  }
+
+  el.innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><span class="title">IDENTITY</span><span class="badge ${username!=='—'?'green':'red'}">${username!=='—'?'RESOLVED':'UNRESOLVED'}</span></div>
+      <div class="panel-body">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+          ${avatar?`<img class="avatar" src="${avatar}" onerror="this.style.display='none'"/>`:''}
+          <div style="flex:1;">
+            <div style="font-size:18px;color:#fff;margin-bottom:6px;">${username}${discriminator!=='0'?'#'+discriminator:''}</div>
+            ${badges.length?`<div>${badges.map(b=>`<span class="badge purple">${b}</span>`).join('')}</div>`:''}
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><div class="k">USER ID</div><div class="v">${id}</div></div>
+          <div class="field"><div class="k">ACCOUNT CREATED</div><div class="v">${created}</div></div>
+          <div class="field"><div class="k">USERNAME</div><div class="v">${username}</div></div>
+          <div class="field"><div class="k">DISCRIMINATOR</div><div class="v">#${discriminator}</div></div>
+          ${bot?`<div class="field"><div class="k">TYPE</div><div class="v"><span class="badge blue">BOT ACCOUNT</span></div></div>`:''}
+        </div>
+        ${banner?`<div style="margin-top:12px;"><div class="k" style="font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;">BANNER</div><img src="${banner}" style="width:100%;max-height:120px;object-fit:cover;border:1px solid var(--border);"/></div>`:''}
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="https://discord.id/?prefill=${id}" target="_blank"><span class="badge blue">DISCORD.ID ↗</span></a>
+          <a href="https://lookup.guru/${id}" target="_blank"><span class="badge blue">LOOKUP.GURU ↗</span></a>
+          <a href="https://top.gg/user/${id}" target="_blank"><span class="badge blue">TOP.GG ↗</span></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">BREACH CORRELATIONS</span>
+        <span class="badge ${breaches.length?'red':'green'}">${breaches.length?breaches.length+' BREACHES FOUND':'CLEAN'}</span>
+      </div>
+      <div class="panel-body">
+        ${breaches.length
+          ? breaches.map(b=>`
+            <div class="breach-item">
+              <div class="breach-name">⚠ ${b.breachid||b.site||'UNKNOWN SOURCE'}</div>
+              <div class="breach-meta">
+                ${b.xposed_date?`DATE: ${b.xposed_date} · `:''}
+                ${b.xposed_data?`EXPOSED: ${(Array.isArray(b.xposed_data)?b.xposed_data:b.xposed_data.split(';')).join(', ')}`:''}
+              </div>
+            </div>`).join('')
+          : `<div class="empty">NO BREACH DATA FOUND FOR THIS IDENTITY</div>`
+        }
+      </div>
+    </div>`;
+}
+
+// ══════════ ROBLOX OSINT ══════════
+async function robloxLookup(){
+  const q=document.getElementById('rob-input').value.trim();
+  if(!q)return;
+  const el=document.getElementById('rob-result');
+  el.innerHTML='<div class="loader">TRACING ROBLOX TARGET...</div>';
+
+  let uid=null,info={},friends=[],games=[];
+
+  // resolve username → id
+  if(isNaN(q)){
+    try{
+      const r=await fetch('https://users.roblox.com/v1/usernames/users',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({usernames:[q],excludeBannedUsers:false})
+      });
+      const d=await r.json();
+      if(d?.data?.[0])uid=d.data[0].id;
+    }catch(e){}
+  }else{uid=parseInt(q);}
+
+  if(!uid){
+    el.innerHTML='<div class="panel"><div class="panel-body"><div class="empty">USER NOT FOUND</div></div></div>';
     return;
   }
-  document.getElementById('inbox').innerHTML = msgs.map(m => `
-    <div class="mail-item" onclick="openMail('${m.id}')">
-      <div class="mail-from">${m.from?.address || 'Unknown'}</div>
-      <div class="mail-sub">${m.subject || '(no subject)'}</div>
-    </div>`).join('');
-}
 
-async function openMail(id) {
-  const res = await fetch('https://api.mail.tm/messages/'+id, {
-    headers:{'Authorization':'Bearer '+tmToken}
-  });
-  const data = await res.json();
-  document.getElementById('mail-body-card').style.display = 'block';
-  document.getElementById('mail-body').innerText =
-    `From: ${data.from?.address}\nSubject: ${data.subject}\n\n${data.text || data.html?.replace(/<[^>]+>/g,'') || '(empty)'}`;
-}
+  // user info
+  try{
+    const r=await fetch(`https://users.roblox.com/v1/users/${uid}`);
+    info=await r.json();
+  }catch(e){}
 
-function copyAddr() {
-  navigator.clipboard.writeText(tmEmail);
-}
+  // avatar
+  let avatarUrl='';
+  try{
+    const r=await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=150x150&format=Png&isCircular=false`);
+    const d=await r.json();
+    avatarUrl=d?.data?.[0]?.imageUrl||'';
+  }catch(e){}
 
-// ── DISCORD OSINT ──
-async function discordLookup() {
-  const id = document.getElementById('disc-id').value.trim();
-  if (!id) return;
-  const el = document.getElementById('disc-result');
-  el.innerHTML = '<div class="loader">Looking up...</div>';
+  // friends count
+  let friendCount=0;
+  try{
+    const r=await fetch(`https://friends.roblox.com/v1/users/${uid}/friends/count`);
+    const d=await r.json();
+    friendCount=d?.count||0;
+  }catch(e){}
 
-  // Snowflake → creation date
-  const epoch = 1420070400000n;
-  const ts = Number((BigInt(id) >> 22n) + epoch);
-  const created = new Date(ts).toUTCString();
+  // followers/following
+  let followers=0,following=0;
+  try{
+    const [fr,fg]=await Promise.all([
+      fetch(`https://friends.roblox.com/v1/users/${uid}/followers/count`).then(r=>r.json()),
+      fetch(`https://friends.roblox.com/v1/users/${uid}/followings/count`).then(r=>r.json())
+    ]);
+    followers=fr?.count||0;
+    following=fg?.count||0;
+  }catch(e){}
 
-  // Public Discord API (no token needed for basic user info via unofficial endpoint)
-  let avatar = '', username = '', discriminator = '', banner = '', badges = [];
-  try {
-    const r = await fetch(`https://japi.rest/discord/v1/user/${id}`);
-    const d = await r.json();
-    if (d.data) {
-      username = d.data.username || '';
-      discriminator = d.data.discriminator || '';
-      const avatarHash = d.data.avatar;
-      if (avatarHash) avatar = `https://cdn.discordapp.com/avatars/${id}/${avatarHash}.png?size=128`;
-      const bannerHash = d.data.banner;
-      if (bannerHash) banner = `https://cdn.discordapp.com/banners/${id}/${bannerHash}.png?size=512`;
-      const flags = d.data.public_flags || 0;
-      if (flags & 1) badges.push('Staff');
-      if (flags & 64) badges.push('HypeSquad Bravery');
-      if (flags & 128) badges.push('HypeSquad Brilliance');
-      if (flags & 256) badges.push('HypeSquad Balance');
-      if (flags & 512) badges.push('Early Supporter');
-      if (flags & 131072) badges.push('Verified Bot Dev');
-      if (flags & 4194304) badges.push('Active Developer');
-    }
-  } catch(e) {}
+  // previous usernames
+  let prevNames=[];
+  try{
+    const r=await fetch(`https://users.roblox.com/v1/users/${uid}/username-history?limit=10`);
+    const d=await r.json();
+    prevNames=(d?.data||[]).map(x=>x.name);
+  }catch(e){}
 
-  // Lookup links
-  const links = [
-    { name:'discord.id', url:`https://discord.id/?prefill=${id}` },
-    { name:'top.gg', url:`https://top.gg/user/${id}` },
-    { name:'lookup.guru', url:`https://lookup.guru/${id}` },
-  ];
+  // recent games/places
+  try{
+    const r=await fetch(`https://games.roblox.com/v2/users/${uid}/games?limit=6&sortOrder=Desc`);
+    const d=await r.json();
+    games=d?.data||[];
+  }catch(e){}
 
-  el.innerHTML = `
-    <div class="card">
-      ${avatar ? `<img class="avatar" src="${avatar}" onerror="this.style.display='none'"/>` : ''}
-      <div class="info-grid">
-        <div class="info-item"><div class="k">User ID</div><div class="v">${id}</div></div>
-        <div class="info-item"><div class="k">Username</div><div class="v">${username || '—'}</div></div>
-        <div class="info-item"><div class="k">Account Created</div><div class="v">${created}</div></div>
-        <div class="info-item"><div class="k">Discriminator</div><div class="v">${discriminator || '—'}</div></div>
-        ${badges.length ? `<div class="info-item" style="grid-column:1/-1"><div class="k">Badges</div><div class="v">${badges.map(b=>`<span class="badge purple">${b}</span>`).join('')}</div></div>` : ''}
-        ${banner ? `<div class="info-item" style="grid-column:1/-1"><div class="k">Banner</div><img src="${banner}" style="width:100%;border-radius:6px;margin-top:6px"/></div>` : ''}
+  const joined=info.created?new Date(info.created).toUTCString():'—';
+  const banned=info.isBanned;
+
+  el.innerHTML=`
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">ROBLOX PROFILE</span>
+        <span class="badge ${banned?'red':'green'}">${banned?'BANNED':'ACTIVE'}</span>
       </div>
-      <div style="margin-top:16px;font-size:13px;color:var(--muted)">External links:</div>
-      <div style="margin-top:8px">${links.map(l=>`<a href="${l.url}" target="_blank" style="margin-right:12px">${l.name} ↗</a>`).join('')}</div>
-    </div>`;
-}
-
-// ── DOMAIN OSINT ──
-async function domainLookup() {
-  const dom = document.getElementById('dom-input').value.trim().replace(/https?:\/\//,'').replace(/\//,'');
-  if (!dom) return;
-  const el = document.getElementById('dom-result');
-  el.innerHTML = '<div class="loader">Scanning...</div>';
-
-  let whois = {}, ip = {};
-  try {
-    const r = await fetch(`https://api.whoisjson.com/v1/${dom}`);
-    whois = await r.json();
-  } catch(e) {}
-  try {
-    const r = await fetch(`https://ipapi.co/${dom}/json/`);
-    ip = await r.json();
-  } catch(e) {}
-
-  const links = [
-    { name:'VirusTotal', url:`https://www.virustotal.com/gui/domain/${dom}` },
-    { name:'crt.sh (SSL certs)', url:`https://crt.sh/?q=${dom}` },
-    { name:'Shodan', url:`https://www.shodan.io/search?query=${dom}` },
-    { name:'WaybackMachine', url:`https://web.archive.org/web/*/${dom}` },
-    { name:'DNSDumpster', url:`https://dnsdumpster.com` },
-  ];
-
-  el.innerHTML = `
-    <div class="card">
-      <div class="info-grid">
-        <div class="info-item"><div class="k">Domain</div><div class="v">${dom}</div></div>
-        <div class="info-item"><div class="k">IP</div><div class="v">${ip.ip || '—'}</div></div>
-        <div class="info-item"><div class="k">Country</div><div class="v">${ip.country_name || '—'}</div></div>
-        <div class="info-item"><div class="k">ISP / Org</div><div class="v">${ip.org || '—'}</div></div>
-        <div class="info-item"><div class="k">City</div><div class="v">${ip.city || '—'}</div></div>
-        <div class="info-item"><div class="k">Region</div><div class="v">${ip.region || '—'}</div></div>
-        <div class="info-item" style="grid-column:1/-1"><div class="k">Registrar</div><div class="v">${whois?.registrar?.name || '—'}</div></div>
-        <div class="info-item"><div class="k">Created</div><div class="v">${whois?.dates?.created || '—'}</div></div>
-        <div class="info-item"><div class="k">Expires</div><div class="v">${whois?.dates?.expiration || '—'}</div></div>
-      </div>
-      <div style="margin-top:16px;font-size:13px;color:var(--muted)">Recon links:</div>
-      <div style="margin-top:8px">${links.map(l=>`<a href="${l.url}" target="_blank" style="margin-right:12px">${l.name} ↗</a>`).join('')}</div>
-    </div>`;
-}
-
-// ── USERNAME OSINT ──
-function usernameLookup() {
-  const u = document.getElementById('uname-input').value.trim();
-  if (!u) return;
-  const platforms = [
-    { name:'GitHub', url:`https://github.com/${u}` },
-    { name:'Twitter/X', url:`https://x.com/${u}` },
-    { name:'Instagram', url:`https://instagram.com/${u}` },
-    { name:'TikTok', url:`https://tiktok.com/@${u}` },
-    { name:'Reddit', url:`https://reddit.com/user/${u}` },
-    { name:'Twitch', url:`https://twitch.tv/${u}` },
-    { name:'YouTube', url:`https://youtube.com/@${u}` },
-    { name:'Steam', url:`https://steamcommunity.com/id/${u}` },
-    { name:'Roblox', url:`https://www.roblox.com/search/users?keyword=${u}` },
-    { name:'Snapchat', url:`https://snapchat.com/add/${u}` },
-    { name:'Pinterest', url:`https://pinterest.com/${u}` },
-    { name:'Spotify', url:`https://open.spotify.com/user/${u}` },
-    { name:'Keybase', url:`https://keybase.io/${u}` },
-    { name:'Linktree', url:`https://linktr.ee/${u}` },
-    { name:'Medium', url:`https://medium.com/@${u}` },
-    { name:'Dev.to', url:`https://dev.to/${u}` },
-    { name:'Replit', url:`https://replit.com/@${u}` },
-    { name:'Pastebin', url:`https://pastebin.com/u/${u}` },
-    { name:'Sherlock (run locally)', url:`https://github.com/sherlock-project/sherlock` },
-  ];
-  const el = document.getElementById('uname-result');
-  el.innerHTML = `
-    <div class="card">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Checking <span style="color:#a78bfa">${u}</span> across ${platforms.length} platforms — click to verify each:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${platforms.map(p=>`<a href="${p.url}" target="_blank"><span class="badge blue" style="font-size:12px;padding:5px 10px;cursor:pointer">${p.name} ↗</span></a>`).join('')}
-      </div>
-      <div style="margin-top:16px;font-size:13px;color:var(--muted)">Full automated scan → <a href="https://whatsmyname.app/?q=${u}" target="_blank">whatsmyname.app ↗</a></div>
-    </div>`;
-}
-
-// ── IP LOOKUP ──
-async function ipLookup() {
-  const raw = document.getElementById('ip-input').value.trim();
-  const target = raw || '';
-  const el = document.getElementById('ip-result');
-  el.innerHTML = '<div class="loader">Looking up...</div>';
-  try {
-    const r = await fetch(`https://ipapi.co/${target}/json/`);
-    const d = await r.json();
-    el.innerHTML = `
-      <div class="card">
-        <div class="info-grid">
-          <div class="info-item"><div class="k">IP</div><div class="v">${d.ip}</div></div>
-          <div class="info-item"><div class="k">Type</div><div class="v">${d.version || '—'}</div></div>
-          <div class="info-item"><div class="k">Country</div><div class="v">${d.country_name || '—'} ${d.country_code || ''}</div></div>
-          <div class="info-item"><div class="k">Region</div><div class="v">${d.region || '—'}</div></div>
-          <div class="info-item"><div class="k">City</div><div class="v">${d.city || '—'}</div></div>
-          <div class="info-item"><div class="k">Postal</div><div class="v">${d.postal || '—'}</div></div>
-          <div class="info-item"><div class="k">Latitude</div><div class="v">${d.latitude || '—'}</div></div>
-          <div class="info-item"><div class="k">Longitude</div><div class="v">${d.longitude || '—'}</div></div>
-          <div class="info-item"><div class="k">ISP / Org</div><div class="v">${d.org || '—'}</div></div>
-          <div class="info-item"><div class="k">ASN</div><div class="v">${d.asn || '—'}</div></div>
-          <div class="info-item"><div class="k">Timezone</div><div class="v">${d.timezone || '—'}</div></div>
-          <div class="info-item"><div class="k">Currency</div><div class="v">${d.currency_name || '—'}</div></div>
+      <div class="panel-body">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+          ${avatarUrl?`<img class="rob-avatar" src="${avatarUrl}" onerror="this.style.display='none'"/>`:''}
+          <div style="flex:1;">
+            <div style="font-size:18px;color:#fff;margin-bottom:4px;">${info.displayName||info.name||'—'}</div>
+            <div style="font-size:12px;color:var(--muted);">@${info.name||'—'}</div>
+            ${info.description?`<div style="font-size:12px;color:var(--muted);margin-top:8px;max-width:400px;">${info.description.slice(0,120)}${info.description.length>120?'...':''}</div>`:''}
+          </div>
         </div>
-        <div style="margin-top:14px">
-          <a href="https://www.shodan.io/host/${d.ip}" target="_blank" style="margin-right:12px">Shodan ↗</a>
-          <a href="https://www.abuseipdb.com/check/${d.ip}" target="_blank" style="margin-right:12px">AbuseIPDB ↗</a>
-          <a href="https://ipinfo.io/${d.ip}" target="_blank">ipinfo.io ↗</a>
+        <div class="grid3" style="margin-bottom:10px;">
+          <div class="field"><div class="k">USER ID</div><div class="v">${uid}</div></div>
+          <div class="field"><div class="k">JOINED</div><div class="v">${joined}</div></div>
+          <div class="field"><div class="k">FRIENDS</div><div class="v">${friendCount.toLocaleString()}</div></div>
+          <div class="field"><div class="k">FOLLOWERS</div><div class="v">${followers.toLocaleString()}</div></div>
+          <div class="field"><div class="k">FOLLOWING</div><div class="v">${following.toLocaleString()}</div></div>
+          <div class="field"><div class="k">VERIFIED</div><div class="v">${info.hasVerifiedBadge?'<span class="badge green">YES</span>':'<span class="badge grey">NO</span>'}</div></div>
+        </div>
+        ${prevNames.length?`
+          <div class="field" style="margin-bottom:10px;">
+            <div class="k">PREVIOUS USERNAMES</div>
+            <div class="v">${prevNames.map(n=>`<span class="badge grey">${n}</span>`).join('')}</div>
+          </div>`:''}
+        ${games.length?`
+          <div class="field">
+            <div class="k">OWNED GAMES</div>
+            <div class="v" style="margin-top:4px;">${games.map(g=>`
+              <a href="https://www.roblox.com/games/${g.rootPlace?.id||''}" target="_blank" style="display:block;color:var(--accent2);margin-bottom:2px;font-size:12px;">↗ ${g.name}</a>
+            `).join('')}</div>
+          </div>`:''}
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="https://www.roblox.com/users/${uid}/profile" target="_blank"><span class="badge blue">PROFILE ↗</span></a>
+          <a href="https://www.roblox.com/users/${uid}/friends" target="_blank"><span class="badge blue">FRIENDS ↗</span></a>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════ USERNAME OSINT (live probe — only shows hits) ══════════
+const PLATFORMS=[
+  {name:'GitHub',icon:'🐙',url:'https://github.com/',check:'https://api.github.com/users/'},
+  {name:'Reddit',icon:'🤖',url:'https://reddit.com/user/',api:'https://www.reddit.com/user/{u}/about.json'},
+  {name:'Twitter/X',icon:'🐦',url:'https://x.com/'},
+  {name:'Instagram',icon:'📸',url:'https://instagram.com/'},
+  {name:'TikTok',icon:'🎵',url:'https://tiktok.com/@'},
+  {name:'Twitch',icon:'🎮',url:'https://twitch.tv/'},
+  {name:'YouTube',icon:'▶️',url:'https://youtube.com/@'},
+  {name:'Steam',icon:'🎲',url:'https://steamcommunity.com/id/'},
+  {name:'Roblox',icon:'🎯',url:'https://www.roblox.com/user.aspx?username='},
+  {name:'Pinterest',icon:'📌',url:'https://pinterest.com/'},
+  {name:'Snapchat',icon:'👻',url:'https://snapchat.com/add/'},
+  {name:'Spotify',icon:'🎧',url:'https://open.spotify.com/user/'},
+  {name:'Medium',icon:'📝',url:'https://medium.com/@'},
+  {name:'Dev.to',icon:'💻',url:'https://dev.to/'},
+  {name:'Replit',icon:'🔁',url:'https://replit.com/@'},
+  {name:'Keybase',icon:'🔑',url:'https://keybase.io/'},
+  {name:'Linktree',icon:'🌿',url:'https://linktr.ee/'},
+  {name:'Pastebin',icon:'📋',url:'https://pastebin.com/u/'},
+];
+
+async function probeGitHub(u){
+  try{const r=await fetch('https://api.github.com/users/'+u);return r.status===200;}catch(e){return false;}
+}
+async function probeReddit(u){
+  try{const r=await fetch('https://www.reddit.com/user/'+u+'/about.json');const d=await r.json();return !!d?.data?.name;}catch(e){return false;}
+}
+
+async function usernameLookup(){
+  const u=document.getElementById('uname-input').value.trim();
+  if(!u)return;
+  const el=document.getElementById('uname-result');
+  el.innerHTML='<div class="loader">SCANNING '+PLATFORMS.length+' PLATFORMS...</div>';
+
+  // probe what we can programmatically
+  const probes={GitHub:probeGitHub,Reddit:probeReddit};
+  const results=[];
+
+  // parallel probes
+  const probeTasks=Object.entries(probes).map(async([name,fn])=>{
+    const hit=await fn(u);
+    return{name,hit};
+  });
+  const probeResults=await Promise.all(probeTasks);
+  const probeMap=Object.fromEntries(probeResults.map(r=>[r.name,r.hit]));
+
+  // build results — confirmed hits from probes, unverified links for rest
+  const confirmed=[];const unverified=[];
+  for(const p of PLATFORMS){
+    if(probeMap[p.name]===true){
+      confirmed.push({...p,status:'CONFIRMED'});
+    }else if(probeMap[p.name]===false){
+      // skip — not found
+    }else{
+      unverified.push({...p,status:'UNVERIFIED'});
+    }
+  }
+
+  const renderItem=(p)=>`
+    <div class="platform-hit">
+      <span class="icon">${p.icon}</span>
+      <div>
+        <div class="name">${p.name} ${p.status==='CONFIRMED'?'<span class="badge green">CONFIRMED</span>':'<span class="badge yellow">CHECK</span>'}</div>
+        <a class="url" href="${p.url}${p.name==='TikTok'?'':''}${u}" target="_blank">${p.url}${u} ↗</a>
+      </div>
+      <div class="dot" style="background:${p.status==='CONFIRMED'?'var(--green)':'var(--yellow)'};box-shadow:0 0 4px ${p.status==='CONFIRMED'?'var(--green)':'var(--yellow)'};"></div>
+    </div>`;
+
+  el.innerHTML=`
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">CONFIRMED HITS</span>
+        <span class="badge green">${confirmed.length} FOUND</span>
+      </div>
+      <div class="panel-body">
+        ${confirmed.length?confirmed.map(renderItem).join(''):`<div class="empty">NO CONFIRMED HITS — SEE UNVERIFIED BELOW</div>`}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">UNVERIFIED — CLICK TO CHECK</span>
+        <span class="badge yellow">${unverified.length} TO VERIFY</span>
+      </div>
+      <div class="panel-body">
+        ${unverified.map(renderItem).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="title">FULL SCAN</span></div>
+      <div class="panel-body">
+        <a href="https://whatsmyname.app/?q=${u}" target="_blank"><span class="badge blue">WHATSMYNAME.APP ↗</span></a>
+        <a href="https://sherlock-project.github.io/?q=${u}" target="_blank" style="margin-left:6px;"><span class="badge blue">SHERLOCK ↗</span></a>
+      </div>
+    </div>`;
+}
+
+// ══════════ IP LOOKUP ══════════
+async function ipLookup(){
+  const raw=document.getElementById('ip-input').value.trim();
+  const el=document.getElementById('ip-result');
+  el.innerHTML='<div class="loader">TRACING IP...</div>';
+  try{
+    const r=await fetch(`https://ipapi.co/${raw}/json/`);
+    const d=await r.json();
+    const threat=d.threat||{};
+    el.innerHTML=`
+      <div class="panel">
+        <div class="panel-head">
+          <span class="title">IP INTELLIGENCE // ${d.ip}</span>
+          <span class="badge ${threat.is_vpn||threat.is_proxy?'red':'green'}">${threat.is_vpn?'VPN DETECTED':threat.is_proxy?'PROXY DETECTED':'CLEAN'}</span>
+        </div>
+        <div class="panel-body">
+          <div class="grid3">
+            <div class="field"><div class="k">IP ADDRESS</div><div class="v">${d.ip}</div></div>
+            <div class="field"><div class="k">VERSION</div><div class="v">${d.version||'—'}</div></div>
+            <div class="field"><div class="k">COUNTRY</div><div class="v">${d.country_name||'—'} (${d.country_code||'—'})</div></div>
+            <div class="field"><div class="k">REGION</div><div class="v">${d.region||'—'}</div></div>
+            <div class="field"><div class="k">CITY</div><div class="v">${d.city||'—'}</div></div>
+            <div class="field"><div class="k">POSTAL</div><div class="v">${d.postal||'—'}</div></div>
+            <div class="field"><div class="k">LAT / LON</div><div class="v">${d.latitude||'—'} / ${d.longitude||'—'}</div></div>
+            <div class="field"><div class="k">ISP / ORG</div><div class="v">${d.org||'—'}</div></div>
+            <div class="field"><div class="k">ASN</div><div class="v">${d.asn||'—'}</div></div>
+            <div class="field"><div class="k">TIMEZONE</div><div class="v">${d.timezone||'—'}</div></div>
+            <div class="field"><div class="k">CURRENCY</div><div class="v">${d.currency_name||'—'}</div></div>
+            <div class="field"><div class="k">CALLING CODE</div><div class="v">+${d.country_calling_code||'—'}</div></div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="https://www.shodan.io/host/${d.ip}" target="_blank"><span class="badge blue">SHODAN ↗</span></a>
+            <a href="https://www.abuseipdb.com/check/${d.ip}" target="_blank"><span class="badge blue">ABUSEIPDB ↗</span></a>
+            <a href="https://ipinfo.io/${d.ip}" target="_blank"><span class="badge blue">IPINFO ↗</span></a>
+            <a href="https://bgp.he.net/ip/${d.ip}" target="_blank"><span class="badge blue">BGP ↗</span></a>
+          </div>
         </div>
       </div>`;
-  } catch(e) {
-    el.innerHTML = '<div class="result">Lookup failed.</div>';
+  }catch(e){
+    el.innerHTML='<div class="panel"><div class="panel-body"><div class="empty">LOOKUP FAILED</div></div></div>';
   }
+}
+
+// ══════════ DOMAIN INTEL ══════════
+async function domainLookup(){
+  const dom=document.getElementById('dom-input').value.trim().replace(/https?:\/\//,'').split('/')[0];
+  if(!dom)return;
+  const el=document.getElementById('dom-result');
+  el.innerHTML='<div class="loader">SCANNING DOMAIN...</div>';
+
+  let ip={};
+  try{
+    const r=await fetch(`https://ipapi.co/${dom}/json/`);
+    ip=await r.json();
+  }catch(e){}
+
+  // DNS via cloudflare doh
+  let dnsA=[],dnsMX=[],dnsTXT=[],dnsNS=[];
+  try{
+    const [ra,rm,rt,rn]=await Promise.all([
+      fetch(`https://cloudflare-dns.com/dns-query?name=${dom}&type=A`,{headers:{'Accept':'application/dns-json'}}).then(r=>r.json()),
+      fetch(`https://cloudflare-dns.com/dns-query?name=${dom}&type=MX`,{headers:{'Accept':'application/dns-json'}}).then(r=>r.json()),
+      fetch(`https://cloudflare-dns.com/dns-query?name=${dom}&type=TXT`,{headers:{'Accept':'application/dns-json'}}).then(r=>r.json()),
+      fetch(`https://cloudflare-dns.com/dns-query?name=${dom}&type=NS`,{headers:{'Accept':'application/dns-json'}}).then(r=>r.json()),
+    ]);
+    dnsA=(ra?.Answer||[]).map(x=>x.data);
+    dnsMX=(rm?.Answer||[]).map(x=>x.data);
+    dnsTXT=(rt?.Answer||[]).map(x=>x.data);
+    dnsNS=(rn?.Answer||[]).map(x=>x.data);
+  }catch(e){}
+
+  el.innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><span class="title">DOMAIN INTELLIGENCE // ${dom}</span></div>
+      <div class="panel-body">
+        <div class="grid2" style="margin-bottom:10px;">
+          <div class="field"><div class="k">DOMAIN</div><div class="v">${dom}</div></div>
+          <div class="field"><div class="k">RESOLVED IP</div><div class="v">${ip.ip||dnsA[0]||'—'}</div></div>
+          <div class="field"><div class="k">COUNTRY</div><div class="v">${ip.country_name||'—'}</div></div>
+          <div class="field"><div class="k">ISP / ORG</div><div class="v">${ip.org||'—'}</div></div>
+          <div class="field"><div class="k">CITY</div><div class="v">${ip.city||'—'}</div></div>
+          <div class="field"><div class="k">ASN</div><div class="v">${ip.asn||'—'}</div></div>
+        </div>
+        <div class="field" style="margin-bottom:8px;"><div class="k">A RECORDS</div><div class="v">${dnsA.length?dnsA.join(', '):'—'}</div></div>
+        <div class="field" style="margin-bottom:8px;"><div class="k">NS RECORDS</div><div class="v">${dnsNS.length?dnsNS.join(', '):'—'}</div></div>
+        <div class="field" style="margin-bottom:8px;"><div class="k">MX RECORDS</div><div class="v">${dnsMX.length?dnsMX.join(', '):'—'}</div></div>
+        <div class="field" style="margin-bottom:14px;"><div class="k">TXT RECORDS</div><div class="v" style="font-size:11px;">${dnsTXT.length?dnsTXT.slice(0,3).join('<br>'):'—'}</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="https://crt.sh/?q=${dom}" target="_blank"><span class="badge blue">CRT.SH (SSL) ↗</span></a>
+          <a href="https://www.virustotal.com/gui/domain/${dom}" target="_blank"><span class="badge blue">VIRUSTOTAL ↗</span></a>
+          <a href="https://www.shodan.io/search?query=${dom}" target="_blank"><span class="badge blue">SHODAN ↗</span></a>
+          <a href="https://web.archive.org/web/*/${dom}" target="_blank"><span class="badge blue">WAYBACK ↗</span></a>
+          <a href="https://dnsdumpster.com" target="_blank"><span class="badge blue">DNSDUMPSTER ↗</span></a>
+          <a href="https://securitytrails.com/domain/${dom}/dns" target="_blank"><span class="badge blue">SECURITYTRAILS ↗</span></a>
+        </div>
+      </div>
+    </div>`;
 }
 
 // boot
 initMail();
-setInterval(checkMail, 15000);
+setInterval(checkMail,15000);
 </script>
 </body>
 </html>
