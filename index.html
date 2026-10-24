@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VANTA Tools</title>
+<style>
+  :root { --bg: #0a0a0a; --surface: #111; --border: #222; --accent: #7c3aed; --text: #e5e5e5; --muted: #555; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+  .nav { display:flex; gap:4px; padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .nav button { padding:8px 16px; background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:6px; cursor:pointer; font-size:13px; transition:all .2s; }
+  .nav button.active, .nav button:hover { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .page { display:none; padding:24px; max-width:800px; margin:0 auto; }
+  .page.active { display:block; }
+  h2 { font-size:18px; margin-bottom:20px; color:#fff; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
+  input, select { width:100%; padding:10px 14px; background:#1a1a1a; border:1px solid var(--border); color:var(--text); border-radius:7px; font-size:14px; margin-bottom:12px; outline:none; }
+  input:focus { border-color:var(--accent); }
+  button.btn { padding:10px 20px; background:var(--accent); border:none; color:#fff; border-radius:7px; cursor:pointer; font-size:14px; margin-right:8px; }
+  button.btn.sec { background:#1a1a1a; border:1px solid var(--border); }
+  .result { background:#0d0d0d; border:1px solid var(--border); border-radius:8px; padding:16px; margin-top:16px; font-size:13px; line-height:1.8; word-break:break-all; }
+  .result .key { color:var(--muted); }
+  .result .val { color:#a78bfa; font-weight:500; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:4px; }
+  .badge.green { background:#064e3b; color:#34d399; }
+  .badge.purple { background:#2e1065; color:#a78bfa; }
+  .badge.blue { background:#1e3a5f; color:#60a5fa; }
+  .inbox { max-height:300px; overflow-y:auto; }
+  .mail-item { padding:12px; border-bottom:1px solid var(--border); cursor:pointer; }
+  .mail-item:hover { background:#161616; }
+  .mail-from { font-size:12px; color:var(--muted); }
+  .mail-sub { font-size:14px; color:var(--text); margin-top:2px; }
+  .loader { color:var(--muted); font-size:13px; padding:12px 0; }
+  .copy-btn { font-size:11px; padding:4px 10px; background:#1a1a1a; border:1px solid var(--border); color:var(--muted); border-radius:4px; cursor:pointer; float:right; }
+  .tab-row { display:flex; gap:8px; margin-bottom:16px; }
+  .tab-btn { padding:6px 14px; background:#1a1a1a; border:1px solid var(--border); color:var(--muted); border-radius:5px; cursor:pointer; font-size:12px; }
+  .tab-btn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .domain-tag { display:inline-block; padding:3px 10px; background:#1a1a1a; border:1px solid var(--border); border-radius:5px; font-size:12px; margin:2px; cursor:pointer; }
+  .domain-tag:hover { border-color:var(--accent); color:var(--accent); }
+  a { color:#a78bfa; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .avatar { width:64px; height:64px; border-radius:50%; border:2px solid var(--accent); margin-bottom:12px; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .info-item { background:#0d0d0d; border-radius:6px; padding:10px 12px; }
+  .info-item .k { font-size:11px; color:var(--muted); margin-bottom:2px; }
+  .info-item .v { font-size:13px; color:#e5e5e5; }
+  @media(max-width:500px) { .info-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="active" onclick="go('tempmail')">📧 TempMail</button>
+  <button onclick="go('discord')">🎮 Discord OSINT</button>
+  <button onclick="go('domain')">🌐 Domain OSINT</button>
+  <button onclick="go('username')">👤 Username OSINT</button>
+  <button onclick="go('ip')">📡 IP Lookup</button>
+</div>
+
+<!-- ══ TEMP MAIL ══ -->
+<div id="page-tempmail" class="page active">
+  <h2>📧 Temporary Email</h2>
+  <div class="card">
+    <div id="tm-addr" style="font-size:16px;color:#a78bfa;margin-bottom:12px;">Generating inbox...</div>
+    <button class="btn" onclick="copyAddr()">Copy Address</button>
+    <button class="btn sec" onclick="initMail()">New Address</button>
+    <button class="btn sec" onclick="checkMail()">Refresh Inbox</button>
+  </div>
+  <div class="card">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Inbox <span id="mail-count" style="color:#a78bfa"></span></div>
+    <div class="inbox" id="inbox"><div class="loader">No messages yet...</div></div>
+  </div>
+  <div class="card" id="mail-body-card" style="display:none">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Message</div>
+    <div id="mail-body" style="white-space:pre-wrap;font-size:13px;line-height:1.7;"></div>
+  </div>
+</div>
+
+<!-- ══ DISCORD OSINT ══ -->
+<div id="page-discord" class="page">
+  <h2>🎮 Discord OSINT</h2>
+  <div class="card">
+    <input id="disc-id" placeholder="Discord User ID (e.g. 123456789012345678)"/>
+    <button class="btn" onclick="discordLookup()">Lookup</button>
+  </div>
+  <div id="disc-result"></div>
+</div>
+
+<!-- ══ DOMAIN OSINT ══ -->
+<div id="page-domain" class="page">
+  <h2>🌐 Domain OSINT</h2>
+  <div class="card">
+    <input id="dom-input" placeholder="domain.com"/>
+    <button class="btn" onclick="domainLookup()">Lookup</button>
+  </div>
+  <div id="dom-result"></div>
+</div>
+
+<!-- ══ USERNAME OSINT ══ -->
+<div id="page-username" class="page">
+  <h2>👤 Username OSINT</h2>
+  <div class="card">
+    <input id="uname-input" placeholder="username"/>
+    <button class="btn" onclick="usernameLookup()">Search Platforms</button>
+  </div>
+  <div id="uname-result"></div>
+</div>
+
+<!-- ══ IP LOOKUP ══ -->
+<div id="page-ip" class="page">
+  <h2>📡 IP Lookup</h2>
+  <div class="card">
+    <input id="ip-input" placeholder="IP address (leave blank for your own)"/>
+    <button class="btn" onclick="ipLookup()">Lookup</button>
+    <button class="btn sec" onclick="document.getElementById('ip-input').value='';ipLookup()">My IP</button>
+  </div>
+  <div id="ip-result"></div>
+</div>
+
+<script>
+// ── nav ──
+function go(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── TEMP MAIL (mail.tm — free, no key) ──
+let tmToken = '', tmEmail = '', tmId = '';
+
+async function initMail() {
+  document.getElementById('tm-addr').innerText = 'Generating...';
+  document.getElementById('inbox').innerHTML = '<div class="loader">Loading...</div>';
+  try {
+    const domsRes = await fetch('https://api.mail.tm/domains');
+    const domsData = await domsRes.json();
+    const domain = domsData['hydra:member'][0].domain;
+    const user = Math.random().toString(36).substring(2,10);
+    tmEmail = user + '@' + domain;
+    const pass = Math.random().toString(36).substring(2,14);
+    await
