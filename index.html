@@ -140,4 +140,232 @@ async function initMail() {
     const user = Math.random().toString(36).substring(2,10);
     tmEmail = user + '@' + domain;
     const pass = Math.random().toString(36).substring(2,14);
-    await
+    await fetch('https://api.mail.tm/accounts', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({address: tmEmail, password: pass})
+    });
+    const tokenRes = await fetch('https://api.mail.tm/token', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({address: tmEmail, password: pass})
+    });
+    const tokenData = await tokenRes.json();
+    tmToken = tokenData.token;
+    document.getElementById('tm-addr').innerText = tmEmail;
+    checkMail();
+  } catch(e) {
+    document.getElementById('tm-addr').innerText = 'Error — try refreshing';
+  }
+}
+
+async function checkMail() {
+  if (!tmToken) return;
+  const res = await fetch('https://api.mail.tm/messages', {
+    headers:{'Authorization':'Bearer '+tmToken}
+  });
+  const data = await res.json();
+  const msgs = data['hydra:member'] || [];
+  document.getElementById('mail-count').innerText = '('+msgs.length+')';
+  if (!msgs.length) {
+    document.getElementById('inbox').innerHTML = '<div class="loader">No messages yet...</div>';
+    return;
+  }
+  document.getElementById('inbox').innerHTML = msgs.map(m => `
+    <div class="mail-item" onclick="openMail('${m.id}')">
+      <div class="mail-from">${m.from?.address || 'Unknown'}</div>
+      <div class="mail-sub">${m.subject || '(no subject)'}</div>
+    </div>`).join('');
+}
+
+async function openMail(id) {
+  const res = await fetch('https://api.mail.tm/messages/'+id, {
+    headers:{'Authorization':'Bearer '+tmToken}
+  });
+  const data = await res.json();
+  document.getElementById('mail-body-card').style.display = 'block';
+  document.getElementById('mail-body').innerText =
+    `From: ${data.from?.address}\nSubject: ${data.subject}\n\n${data.text || data.html?.replace(/<[^>]+>/g,'') || '(empty)'}`;
+}
+
+function copyAddr() {
+  navigator.clipboard.writeText(tmEmail);
+}
+
+// ── DISCORD OSINT ──
+async function discordLookup() {
+  const id = document.getElementById('disc-id').value.trim();
+  if (!id) return;
+  const el = document.getElementById('disc-result');
+  el.innerHTML = '<div class="loader">Looking up...</div>';
+
+  // Snowflake → creation date
+  const epoch = 1420070400000n;
+  const ts = Number((BigInt(id) >> 22n) + epoch);
+  const created = new Date(ts).toUTCString();
+
+  // Public Discord API (no token needed for basic user info via unofficial endpoint)
+  let avatar = '', username = '', discriminator = '', banner = '', badges = [];
+  try {
+    const r = await fetch(`https://japi.rest/discord/v1/user/${id}`);
+    const d = await r.json();
+    if (d.data) {
+      username = d.data.username || '';
+      discriminator = d.data.discriminator || '';
+      const avatarHash = d.data.avatar;
+      if (avatarHash) avatar = `https://cdn.discordapp.com/avatars/${id}/${avatarHash}.png?size=128`;
+      const bannerHash = d.data.banner;
+      if (bannerHash) banner = `https://cdn.discordapp.com/banners/${id}/${bannerHash}.png?size=512`;
+      const flags = d.data.public_flags || 0;
+      if (flags & 1) badges.push('Staff');
+      if (flags & 64) badges.push('HypeSquad Bravery');
+      if (flags & 128) badges.push('HypeSquad Brilliance');
+      if (flags & 256) badges.push('HypeSquad Balance');
+      if (flags & 512) badges.push('Early Supporter');
+      if (flags & 131072) badges.push('Verified Bot Dev');
+      if (flags & 4194304) badges.push('Active Developer');
+    }
+  } catch(e) {}
+
+  // Lookup links
+  const links = [
+    { name:'discord.id', url:`https://discord.id/?prefill=${id}` },
+    { name:'top.gg', url:`https://top.gg/user/${id}` },
+    { name:'lookup.guru', url:`https://lookup.guru/${id}` },
+  ];
+
+  el.innerHTML = `
+    <div class="card">
+      ${avatar ? `<img class="avatar" src="${avatar}" onerror="this.style.display='none'"/>` : ''}
+      <div class="info-grid">
+        <div class="info-item"><div class="k">User ID</div><div class="v">${id}</div></div>
+        <div class="info-item"><div class="k">Username</div><div class="v">${username || '—'}</div></div>
+        <div class="info-item"><div class="k">Account Created</div><div class="v">${created}</div></div>
+        <div class="info-item"><div class="k">Discriminator</div><div class="v">${discriminator || '—'}</div></div>
+        ${badges.length ? `<div class="info-item" style="grid-column:1/-1"><div class="k">Badges</div><div class="v">${badges.map(b=>`<span class="badge purple">${b}</span>`).join('')}</div></div>` : ''}
+        ${banner ? `<div class="info-item" style="grid-column:1/-1"><div class="k">Banner</div><img src="${banner}" style="width:100%;border-radius:6px;margin-top:6px"/></div>` : ''}
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:var(--muted)">External links:</div>
+      <div style="margin-top:8px">${links.map(l=>`<a href="${l.url}" target="_blank" style="margin-right:12px">${l.name} ↗</a>`).join('')}</div>
+    </div>`;
+}
+
+// ── DOMAIN OSINT ──
+async function domainLookup() {
+  const dom = document.getElementById('dom-input').value.trim().replace(/https?:\/\//,'').replace(/\//,'');
+  if (!dom) return;
+  const el = document.getElementById('dom-result');
+  el.innerHTML = '<div class="loader">Scanning...</div>';
+
+  let whois = {}, ip = {};
+  try {
+    const r = await fetch(`https://api.whoisjson.com/v1/${dom}`);
+    whois = await r.json();
+  } catch(e) {}
+  try {
+    const r = await fetch(`https://ipapi.co/${dom}/json/`);
+    ip = await r.json();
+  } catch(e) {}
+
+  const links = [
+    { name:'VirusTotal', url:`https://www.virustotal.com/gui/domain/${dom}` },
+    { name:'crt.sh (SSL certs)', url:`https://crt.sh/?q=${dom}` },
+    { name:'Shodan', url:`https://www.shodan.io/search?query=${dom}` },
+    { name:'WaybackMachine', url:`https://web.archive.org/web/*/${dom}` },
+    { name:'DNSDumpster', url:`https://dnsdumpster.com` },
+  ];
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="info-grid">
+        <div class="info-item"><div class="k">Domain</div><div class="v">${dom}</div></div>
+        <div class="info-item"><div class="k">IP</div><div class="v">${ip.ip || '—'}</div></div>
+        <div class="info-item"><div class="k">Country</div><div class="v">${ip.country_name || '—'}</div></div>
+        <div class="info-item"><div class="k">ISP / Org</div><div class="v">${ip.org || '—'}</div></div>
+        <div class="info-item"><div class="k">City</div><div class="v">${ip.city || '—'}</div></div>
+        <div class="info-item"><div class="k">Region</div><div class="v">${ip.region || '—'}</div></div>
+        <div class="info-item" style="grid-column:1/-1"><div class="k">Registrar</div><div class="v">${whois?.registrar?.name || '—'}</div></div>
+        <div class="info-item"><div class="k">Created</div><div class="v">${whois?.dates?.created || '—'}</div></div>
+        <div class="info-item"><div class="k">Expires</div><div class="v">${whois?.dates?.expiration || '—'}</div></div>
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:var(--muted)">Recon links:</div>
+      <div style="margin-top:8px">${links.map(l=>`<a href="${l.url}" target="_blank" style="margin-right:12px">${l.name} ↗</a>`).join('')}</div>
+    </div>`;
+}
+
+// ── USERNAME OSINT ──
+function usernameLookup() {
+  const u = document.getElementById('uname-input').value.trim();
+  if (!u) return;
+  const platforms = [
+    { name:'GitHub', url:`https://github.com/${u}` },
+    { name:'Twitter/X', url:`https://x.com/${u}` },
+    { name:'Instagram', url:`https://instagram.com/${u}` },
+    { name:'TikTok', url:`https://tiktok.com/@${u}` },
+    { name:'Reddit', url:`https://reddit.com/user/${u}` },
+    { name:'Twitch', url:`https://twitch.tv/${u}` },
+    { name:'YouTube', url:`https://youtube.com/@${u}` },
+    { name:'Steam', url:`https://steamcommunity.com/id/${u}` },
+    { name:'Roblox', url:`https://www.roblox.com/search/users?keyword=${u}` },
+    { name:'Snapchat', url:`https://snapchat.com/add/${u}` },
+    { name:'Pinterest', url:`https://pinterest.com/${u}` },
+    { name:'Spotify', url:`https://open.spotify.com/user/${u}` },
+    { name:'Keybase', url:`https://keybase.io/${u}` },
+    { name:'Linktree', url:`https://linktr.ee/${u}` },
+    { name:'Medium', url:`https://medium.com/@${u}` },
+    { name:'Dev.to', url:`https://dev.to/${u}` },
+    { name:'Replit', url:`https://replit.com/@${u}` },
+    { name:'Pastebin', url:`https://pastebin.com/u/${u}` },
+    { name:'Sherlock (run locally)', url:`https://github.com/sherlock-project/sherlock` },
+  ];
+  const el = document.getElementById('uname-result');
+  el.innerHTML = `
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Checking <span style="color:#a78bfa">${u}</span> across ${platforms.length} platforms — click to verify each:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${platforms.map(p=>`<a href="${p.url}" target="_blank"><span class="badge blue" style="font-size:12px;padding:5px 10px;cursor:pointer">${p.name} ↗</span></a>`).join('')}
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:var(--muted)">Full automated scan → <a href="https://whatsmyname.app/?q=${u}" target="_blank">whatsmyname.app ↗</a></div>
+    </div>`;
+}
+
+// ── IP LOOKUP ──
+async function ipLookup() {
+  const raw = document.getElementById('ip-input').value.trim();
+  const target = raw || '';
+  const el = document.getElementById('ip-result');
+  el.innerHTML = '<div class="loader">Looking up...</div>';
+  try {
+    const r = await fetch(`https://ipapi.co/${target}/json/`);
+    const d = await r.json();
+    el.innerHTML = `
+      <div class="card">
+        <div class="info-grid">
+          <div class="info-item"><div class="k">IP</div><div class="v">${d.ip}</div></div>
+          <div class="info-item"><div class="k">Type</div><div class="v">${d.version || '—'}</div></div>
+          <div class="info-item"><div class="k">Country</div><div class="v">${d.country_name || '—'} ${d.country_code || ''}</div></div>
+          <div class="info-item"><div class="k">Region</div><div class="v">${d.region || '—'}</div></div>
+          <div class="info-item"><div class="k">City</div><div class="v">${d.city || '—'}</div></div>
+          <div class="info-item"><div class="k">Postal</div><div class="v">${d.postal || '—'}</div></div>
+          <div class="info-item"><div class="k">Latitude</div><div class="v">${d.latitude || '—'}</div></div>
+          <div class="info-item"><div class="k">Longitude</div><div class="v">${d.longitude || '—'}</div></div>
+          <div class="info-item"><div class="k">ISP / Org</div><div class="v">${d.org || '—'}</div></div>
+          <div class="info-item"><div class="k">ASN</div><div class="v">${d.asn || '—'}</div></div>
+          <div class="info-item"><div class="k">Timezone</div><div class="v">${d.timezone || '—'}</div></div>
+          <div class="info-item"><div class="k">Currency</div><div class="v">${d.currency_name || '—'}</div></div>
+        </div>
+        <div style="margin-top:14px">
+          <a href="https://www.shodan.io/host/${d.ip}" target="_blank" style="margin-right:12px">Shodan ↗</a>
+          <a href="https://www.abuseipdb.com/check/${d.ip}" target="_blank" style="margin-right:12px">AbuseIPDB ↗</a>
+          <a href="https://ipinfo.io/${d.ip}" target="_blank">ipinfo.io ↗</a>
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="result">Lookup failed.</div>';
+  }
+}
+
+// boot
+initMail();
+setInterval(checkMail, 15000);
+</script>
+</body>
+</html>
